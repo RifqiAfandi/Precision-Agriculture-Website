@@ -444,7 +444,7 @@ export function LandingPage() {
       {/* Dark Mode Toggle Button */}
       <button
         onClick={toggleDarkMode}
-        className={`fixed bottom-8 right-8 z-50 bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 text-white p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 ${isLoaded ? 'animate-fade-in' : 'opacity-0'}`}
+        className={`fixed bottom-8 right-8 z-50 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white border border-gray-200 dark:border-transparent p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 ${isLoaded ? 'animate-fade-in' : 'opacity-0'}`}
         aria-label="Toggle dark mode"
       >
         {darkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
