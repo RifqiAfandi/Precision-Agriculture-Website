@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import PropTypes from "prop-types";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -16,13 +17,10 @@ import {
   X,
 } from "lucide-react";
 import { Logo } from "@/components/common/Logo";
-import { WelcomePage } from "./WelcomePage";
-import { GHCompaxDashboard } from "@/features/ghcompax/GHCompaxDashboard";
-import SkyVeraDashboard from "@/features/skyvera/SkyVeraDashboard";
-import { ProfilePage } from "./ProfilePage";
 
 export function DashboardLayout({ user, onLogout, darkMode, toggleDarkMode }) {
-  const [currentPage, setCurrentPage] = useState("welcome");
+  const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -54,12 +52,29 @@ export function DashboardLayout({ user, onLogout, darkMode, toggleDarkMode }) {
     };
   }, [sidebarOpen]);
 
+  // Get current page from URL
+  const getCurrentPage = () => {
+    const path = location.pathname;
+    if (path === '/dashboard' || path === '/dashboard/') return 'welcome';
+    if (path.includes('/ghcompax')) return 'ghcompax';
+    if (path.includes('/skyvera')) return 'skyvera';
+    if (path.includes('/profile')) return 'profile';
+    return 'welcome';
+  };
+
+  const currentPage = getCurrentPage();
+
   const handlePageChange = (pageId) => {
     if (pageId === currentPage) return;
     
     setIsAnimating(true);
     setTimeout(() => {
-      setCurrentPage(pageId);
+      // Navigate using React Router
+      if (pageId === 'welcome') {
+        navigate('/dashboard');
+      } else {
+        navigate(`/dashboard/${pageId}`);
+      }
       setPageKey(prev => prev + 1);
       setIsAnimating(false);
       setSidebarOpen(false);
@@ -89,46 +104,6 @@ export function DashboardLayout({ user, onLogout, darkMode, toggleDarkMode }) {
       status: "active",
     },
   ];
-
-  const renderContent = () => {
-    const content = (() => {
-      switch (currentPage) {
-        case "welcome":
-          return (
-            <WelcomePage
-              user={user}
-              onNavigate={handlePageChange}
-            />
-          );
-        case "ghcompax":
-          return <GHCompaxDashboard />;
-        case "skyvera":
-          return <SkyVeraDashboard />;
-        case "profile":
-          return <ProfilePage user={user} />;
-        default:
-          return (
-            <WelcomePage
-              user={user}
-              onNavigate={handlePageChange}
-            />
-          );
-      }
-    })();
-
-    return (
-      <div 
-        key={pageKey}
-        className={`h-full transition-all duration-300 ${
-          isAnimating 
-            ? 'opacity-0 scale-[0.98]' 
-            : 'opacity-100 scale-100 animate-fade-in'
-        }`}
-      >
-        {content}
-      </div>
-    );
-  };
 
   return (
     <div className="h-screen bg-slate-50 dark:bg-background flex overflow-hidden">
@@ -332,7 +307,18 @@ export function DashboardLayout({ user, onLogout, darkMode, toggleDarkMode }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-background">{renderContent()}</main>
+        <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-background">
+          <div 
+            key={pageKey}
+            className={`h-full transition-all duration-300 ${
+              isAnimating 
+                ? 'opacity-0 scale-[0.98]' 
+                : 'opacity-100 scale-100 animate-fade-in'
+            }`}
+          >
+            <Outlet context={{ user, onNavigate: handlePageChange }} />
+          </div>
+        </main>
       </div>
     </div>
   );

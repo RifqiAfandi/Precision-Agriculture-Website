@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -21,7 +22,9 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
-export function ProfilePage({ user }) {
+export function ProfilePage() {
+  const context = useOutletContext();
+  const user = context?.user;
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);

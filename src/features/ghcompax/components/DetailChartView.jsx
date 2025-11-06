@@ -4,17 +4,6 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { ArrowLeft, TrendingUp, TrendingDown } from 'lucide-react';
 
-/**
- * Komponen untuk menampilkan detail grafik sensor secara penuh
- * @param {Object} props
- * @param {Array} props.data - Data chart
- * @param {String} props.title - Judul sensor
- * @param {String} props.unit - Satuan
- * @param {String} props.color - Warna
- * @param {Component} props.icon - Icon
- * @param {Function} props.onBack - Handler tombol kembali
- * @param {String} props.parameter - Parameter name untuk status
- */
 export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, parameter }) {
   const [timeFilter, setTimeFilter] = useState('1hour'); // Default to '1hour'
   const canvasRef = useRef(null);

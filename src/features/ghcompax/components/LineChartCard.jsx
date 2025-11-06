@@ -1,16 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 
-/**
- * Komponen card chart yang dapat diklik untuk membuka detail view
- * @param {Object} props
- * @param {Array} props.data - Data untuk chart (array dengan format {time, value, timestamp})
- * @param {String} props.title - Judul chart (e.g., "Suhu", "Kelembaban")
- * @param {String} props.unit - Satuan nilai (e.g., "°C", "%")
- * @param {String} props.color - Warna line chart (hex color)
- * @param {Component} props.icon - Icon component dari lucide-react
- * @param {Function} props.onClick - Handler saat card diklik
- */
 export function LineChartCard({ data, title, unit, color = '#10b981', icon: Icon, onClick }) {
   const canvasRef = useRef(null);
   const [tooltip, setTooltip] = useState({ show: false, x: 0, y: 0, value: 0, time: '' });

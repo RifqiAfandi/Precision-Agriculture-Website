@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
@@ -21,7 +22,8 @@ import {
 import { Logo } from "@/components/common/Logo";
 import { useAuth } from "@/contexts/AuthContext";
 
-export function RegisterPage({ onNavigate, onLogin }) {
+export function RegisterPage() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -70,7 +72,7 @@ export function RegisterPage({ onNavigate, onLogin }) {
       const result = await register(userData);
       
       if (result.success) {
-        onLogin(result.user);
+        navigate("/dashboard");
       } else {
         setError(result.error);
       }
@@ -214,7 +216,7 @@ export function RegisterPage({ onNavigate, onLogin }) {
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Already have an account?{" "}
                 <button
-                  onClick={() => onNavigate("login")}
+                  onClick={() => navigate("/login")}
                   className="text-green-600 dark:text-emerald-400 hover:text-green-700 dark:hover:text-emerald-300 font-medium"
                 >
                   Login here
@@ -236,7 +238,7 @@ export function RegisterPage({ onNavigate, onLogin }) {
         <div className="text-center mt-6 animate-fade-in-delay-2">
           <Button
             variant="outline"
-            onClick={() => onNavigate("landing")}
+            onClick={() => navigate("/")}
             className="border-2 border-green-500 dark:border-emerald-600 text-green-700 dark:text-emerald-400 hover:bg-green-600 hover:text-white hover:border-green-600 dark:hover:bg-emerald-600 dark:hover:text-white dark:hover:border-emerald-600 transition-all duration-300"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />

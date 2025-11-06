@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import PropTypes from "prop-types";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import {
   Card,
@@ -11,7 +11,8 @@ import {
 import { Cloud, Home, ArrowRight, Leaf, ChevronDown, ArrowUp } from "lucide-react";
 import { Logo } from "@/components/common/Logo";
 
-export function LandingPage({ onNavigate }) {
+export function LandingPage() {
+  const navigate = useNavigate();
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [visibleSections, setVisibleSections] = useState(new Set());
   const observerRef = useRef(null);
@@ -120,13 +121,13 @@ export function LandingPage({ onNavigate }) {
             <Button
               className="px-3 py-2 sm:px-5 sm:py-4 text-sm sm:text-md border-2 border-green-500 dark:border-emerald-600 text-green-700 dark:text-emerald-400 hover:bg-green-600 hover:text-white hover:border-green-600 dark:hover:bg-emerald-600 dark:hover:text-white dark:hover:border-emerald-600 transition-all duration-300"
               variant="outline"
-              onClick={() => onNavigate("login")}
+              onClick={() => navigate("/login")}
             >
               Login
             </Button>
             <Button
               className="px-3 py-2 sm:px-5 sm:py-4 text-sm sm:text-md bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 dark:from-emerald-600 dark:to-emerald-700 dark:hover:from-emerald-700 dark:hover:to-emerald-800"
-              onClick={() => onNavigate("register")}
+              onClick={() => navigate("/register")}
             >
               Register
             </Button>
@@ -154,7 +155,7 @@ export function LandingPage({ onNavigate }) {
               <Button
                 size="lg"
                 className="w-full sm:w-auto px-6 py-4 sm:px-8 sm:py-6 text-base sm:text-lg bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 dark:from-emerald-600 dark:to-emerald-700 dark:hover:from-emerald-700 dark:hover:to-emerald-800 shadow-lg hover:shadow-xl transition-all duration-300 min-h-[48px] active:scale-95"
-                onClick={() => onNavigate("register")}
+                onClick={() => navigate("/register")}
               >
                 Get Started
                 <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
@@ -343,7 +344,7 @@ export function LandingPage({ onNavigate }) {
             <Button
               size="lg"
               className="px-10 py-6 text-lg bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 dark:from-emerald-600 dark:to-emerald-700 dark:hover:from-emerald-700 dark:hover:to-emerald-800 shadow-lg hover:shadow-xl transition-all duration-300"
-              onClick={() => onNavigate("register")}
+              onClick={() => navigate("/register")}
             >
               Start Free Now
               <ArrowRight className="ml-2 w-5 h-5" />
@@ -419,7 +420,3 @@ export function LandingPage({ onNavigate }) {
     </div>
   );
 }
-
-LandingPage.propTypes = {
-  onNavigate: PropTypes.func.isRequired,
-};

@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -24,7 +25,10 @@ import {
 import { currentGHCompaxData } from "@/features/ghcompax/data/ghcompaxData";
 import { currentWeatherData } from "@/features/skyvera/data/skyveraData";
 
-export function WelcomePage({ user, onNavigate }) {
+export function WelcomePage() {
+  const navigate = useNavigate();
+  const context = useOutletContext();
+  const user = context?.user;
   // Helper functions
   const getStatusColor = (status) => {
     switch (status) {
@@ -315,7 +319,7 @@ export function WelcomePage({ user, onNavigate }) {
               {/* Action Button - Compact */}
               <Button 
                 className="w-full bg-emerald-600 dark:bg-emerald-700 hover:bg-emerald-700 dark:hover:bg-emerald-600 text-white font-medium py-2 sm:py-2.5 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 sm:gap-1.5 md:gap-2 text-[10px] sm:text-xs md:text-sm flex-shrink-0 min-h-[40px] sm:min-h-[44px] active:scale-95"
-                onClick={() => onNavigate("ghcompax")}
+                onClick={() => navigate("/dashboard/ghcompax")}
               >
                 <span>View Detailed Dashboard</span>
                 <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -405,7 +409,7 @@ export function WelcomePage({ user, onNavigate }) {
               {/* Action Button - Compact */}
               <Button 
                 className="w-full bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium py-2 sm:py-2.5 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 sm:gap-1.5 md:gap-2 text-[10px] sm:text-xs md:text-sm flex-shrink-0 min-h-[40px] sm:min-h-[44px] active:scale-95"
-                onClick={() => onNavigate("skyvera")}
+                onClick={() => navigate("/dashboard/skyvera")}
               >
                 <span>View Detailed Dashboard</span>
                 <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />

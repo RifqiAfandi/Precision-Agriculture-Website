@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import PropTypes from "prop-types";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
@@ -15,7 +15,8 @@ import { ArrowLeft, Mail, Lock, AlertCircle } from "lucide-react";
 import { Logo } from "@/components/common/Logo";
 import { useAuth } from "@/contexts/AuthContext";
 
-export function LoginPage({ onNavigate, onLogin }) {
+export function LoginPage() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -37,7 +38,7 @@ export function LoginPage({ onNavigate, onLogin }) {
       const result = await login(email, password);
       
       if (result.success) {
-        onLogin(result.user);
+        navigate("/dashboard");
       } else {
         setError(result.error);
       }
@@ -131,7 +132,7 @@ export function LoginPage({ onNavigate, onLogin }) {
               <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                 Don't have an account?{" "}
                 <button
-                  onClick={() => onNavigate("register")}
+                  onClick={() => navigate("/register")}
                   className="text-green-600 dark:text-emerald-400 hover:text-green-700 dark:hover:text-emerald-300 font-medium"
                 >
                   Register now
@@ -144,7 +145,7 @@ export function LoginPage({ onNavigate, onLogin }) {
         <div className="text-center mt-4 sm:mt-6 animate-fade-in-delay-2">
           <Button
             variant="outline"
-            onClick={() => onNavigate("landing")}
+            onClick={() => navigate("/")}
             className="border-2 border-green-500 dark:border-emerald-600 text-green-700 dark:text-emerald-400 hover:bg-green-600 hover:text-white hover:border-green-600 dark:hover:bg-emerald-600 dark:hover:text-white dark:hover:border-emerald-600 transition-all duration-300 h-10 sm:h-11 px-4 sm:px-6 text-sm active:scale-95"
           >
             <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
@@ -155,8 +156,3 @@ export function LoginPage({ onNavigate, onLogin }) {
     </div>
   );
 }
-
-LoginPage.propTypes = {
-  onNavigate: PropTypes.func.isRequired,
-  onLogin: PropTypes.func.isRequired,
-};

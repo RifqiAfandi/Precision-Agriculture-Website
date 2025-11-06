@@ -22,24 +22,6 @@ import {
   getGHCompaxStats,
 } from './data/ghcompaxData';
 
-/**
- * GH Compax Dashboard - Main Component
- * 
- * Fitur Utama:
- * 1. Real-time monitoring (Detail 2 Data & Detail 4 Data)
- * 2. Riwayat Data - Menampilkan 6 sensor dalam grid 2x3 (klik untuk detail)
- * 3. Detail View - Grafik penuh dengan statistik dan filter waktu
- * 
- * Mode Tampilan:
- * - viewMode: 'overview' | 'detail'
- * - chartMode: 'detail2' | 'detail4' | 'history'
- * 
- * Komponen:
- * - LineChart: Canvas-based chart untuk real-time (detail2 & detail4)
- * - LineChartCard: Canvas-based clickable card untuk history mode
- * - DetailChartView: Full-screen detail view dengan filter waktu
- */
-
 export function GHCompaxDashboard() {
   const [realtimeData, setRealtimeData] = useState(currentGHCompaxData);
   const [tempData, setTempData] = useState(temperatureData);
