@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -18,9 +18,12 @@ import {
   User,
   AlertCircle,
   Building,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { Logo } from "@/components/common/Logo";
 import { useAuth } from "@/contexts/AuthContext";
+import { STORAGE_KEYS } from "@/constants/monitoring";
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -33,7 +36,30 @@ export function RegisterPage() {
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [isPageLoaded, setIsPageLoaded] = useState(false);
   const { register } = useAuth();
+
+  useEffect(() => {
+    const savedDarkMode = localStorage.getItem(STORAGE_KEYS.DARK_MODE);
+    if (savedDarkMode === "true") {
+      setDarkMode(true);
+      document.documentElement.classList.add("dark");
+    }
+    setIsPageLoaded(true);
+  }, []);
+
+  const toggleDarkMode = () => {
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    localStorage.setItem(STORAGE_KEYS.DARK_MODE, newDarkMode.toString());
+
+    if (newDarkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -246,6 +272,15 @@ export function RegisterPage() {
           </Button>
         </div>
       </div>
+
+      {/* Dark Mode Toggle Button */}
+      <button
+        onClick={toggleDarkMode}
+        className={`fixed bottom-8 right-8 z-50 bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 text-white p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 ${isPageLoaded ? 'animate-fade-in' : 'opacity-0'}`}
+        aria-label="Toggle dark mode"
+      >
+        {darkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
+      </button>
     </div>
   );
 }

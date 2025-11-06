@@ -8,12 +8,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/Card";
-import { Cloud, Home, ArrowRight, Leaf, ChevronDown, ArrowUp } from "lucide-react";
+import { Cloud, Home, ArrowRight, Leaf, ChevronDown, ArrowUp, Moon, Sun } from "lucide-react";
 import { Logo } from "@/components/common/Logo";
+import { STORAGE_KEYS } from "@/constants/monitoring";
 
 export function LandingPage() {
   const navigate = useNavigate();
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [visibleSections, setVisibleSections] = useState(new Set());
   const observerRef = useRef(null);
 
@@ -59,6 +62,14 @@ export function LandingPage() {
   useEffect(() => {
     document.documentElement.style.scrollBehavior = "smooth";
 
+    const savedDarkMode = localStorage.getItem(STORAGE_KEYS.DARK_MODE);
+    if (savedDarkMode === "true") {
+      setDarkMode(true);
+      document.documentElement.classList.add("dark");
+    }
+
+    setIsLoaded(true);
+
     const handleScroll = () => {
       if (window.scrollY > 400) {
         setShowBackToTop(true);
@@ -100,6 +111,18 @@ export function LandingPage() {
       }
     };
   }, []);
+
+  const toggleDarkMode = () => {
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    localStorage.setItem(STORAGE_KEYS.DARK_MODE, newDarkMode.toString());
+
+    if (newDarkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  };
 
   const scrollToSection = (sectionId) => {
     const element = document.getElementById(sectionId);
@@ -411,12 +434,21 @@ export function LandingPage() {
       {showBackToTop && (
         <button
           onClick={scrollToTop}
-          className="fixed bottom-8 right-8 z-50 bg-green-600 hover:bg-green-700 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 animate-fade-in"
+          className="fixed bottom-8 right-24 z-50 bg-green-600 hover:bg-green-700 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 animate-fade-in"
           aria-label="Back to top"
         >
           <ArrowUp className="w-6 h-6" />
         </button>
       )}
+
+      {/* Dark Mode Toggle Button */}
+      <button
+        onClick={toggleDarkMode}
+        className={`fixed bottom-8 right-8 z-50 bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 text-white p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 ${isLoaded ? 'animate-fade-in' : 'opacity-0'}`}
+        aria-label="Toggle dark mode"
+      >
+        {darkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
+      </button>
     </div>
   );
 }
