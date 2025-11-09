@@ -5,15 +5,12 @@ import { Badge } from '@/components/ui/Badge';
 import { ArrowLeft, TrendingUp, TrendingDown } from 'lucide-react';
 
 export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, parameter }) {
-  const [timeFilter, setTimeFilter] = useState('1hour'); // Default to '1hour'
+  const [timeFilter, setTimeFilter] = useState('1hour'); 
   const canvasRef = useRef(null);
   const [tooltip, setTooltip] = useState({ show: false, x: 0, y: 0, value: 0, time: '' });
   const animationFrameRef = useRef(null);
   const [animationProgress, setAnimationProgress] = useState(0);
 
-  if (!data || data.length === 0) return null;
-
-  // Fungsi untuk agregasi data per jam
   const aggregateByHour = (dataPoints) => {
     const hourlyData = {};
     
@@ -37,7 +34,6 @@ export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, 
     })).sort((a, b) => a.timestamp - b.timestamp);
   };
 
-  // Fungsi untuk agregasi data per hari
   const aggregateByDay = (dataPoints) => {
     const dailyData = {};
     
@@ -61,7 +57,6 @@ export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, 
     })).sort((a, b) => a.timestamp - b.timestamp);
   };
 
-  // Filter data berdasarkan rentang waktu dengan expected data points
   const getFilteredData = () => {
     const now = Date.now();
     const filterConfig = {
@@ -72,10 +67,8 @@ export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, 
     
     const config = filterConfig[timeFilter];
     
-    // Filter data dalam rentang waktu
     let filtered = data.filter(d => (now - d.timestamp) <= config.timeRange);
     
-    // Agregasi data jika diperlukan
     if (config.aggregate === 'hour') {
       filtered = aggregateByHour(filtered);
     } else if (config.aggregate === 'day') {
@@ -95,13 +88,11 @@ export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, 
   const totalChange = currentValue - previousValue;
   const totalChangePercent = previousValue !== 0 ? (totalChange / previousValue * 100) : 0;
   
-  // Calculate statistics
   const values = filteredData.map(d => d.value);
   const maxValue = Math.max(...values);
   const minValue = Math.min(...values);
   const avgValue = values.reduce((a, b) => a + b, 0) / values.length;
 
-  // Canvas drawing effect
   useEffect(() => {
     if (!filteredData || filteredData.length === 0) return;
 
@@ -112,29 +103,23 @@ export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, 
     const rect = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
 
-    // Set canvas size with device pixel ratio
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
     ctx.scale(dpr, dpr);
 
-    // Clear canvas
     ctx.clearRect(0, 0, rect.width, rect.height);
 
-    // Chart dimensions with padding
     const padding = { top: 30, right: 60, bottom: 70, left: 60 };
     const chartWidth = rect.width - padding.left - padding.right;
     const chartHeight = rect.height - padding.top - padding.bottom;
 
-    // Get value range
     const valueRange = maxValue - minValue || 1;
 
-    // Detect dark mode
     const isDarkMode = document.documentElement.classList.contains('dark');
     const gridColor = isDarkMode ? '#374151' : '#f5f5f5';
     const textColor = isDarkMode ? '#9ca3af' : '#6b7280';
     const axisColor = isDarkMode ? '#4b5563' : '#d1d5db';
 
-    // Draw grid lines (horizontal)
     ctx.strokeStyle = gridColor;
     ctx.lineWidth = 1;
     for (let i = 0; i <= 6; i++) {
@@ -144,7 +129,6 @@ export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, 
       ctx.lineTo(padding.left + chartWidth, y);
       ctx.stroke();
 
-      // Draw y-axis labels
       const value = maxValue - (valueRange / 6) * i;
       ctx.fillStyle = textColor;
       ctx.font = '600 11px Inter, sans-serif';
@@ -152,21 +136,17 @@ export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, 
       ctx.fillText(value.toFixed(1), padding.left - 8, y + 4);
     }
 
-    // Draw vertical grid lines and x-axis labels
     const labelInterval = Math.max(1, Math.floor(expectedPoints / 10));
     ctx.strokeStyle = gridColor;
     
-    // Draw grid lines based on expected points
     for (let i = 0; i <= expectedPoints; i += labelInterval) {
       const x = padding.left + (chartWidth / expectedPoints) * i;
       
-      // Vertical grid line
       ctx.beginPath();
       ctx.moveTo(x, padding.top);
       ctx.lineTo(x, padding.top + chartHeight);
       ctx.stroke();
 
-      // X-axis labels - only if we have data at this point
       const dataIndex = Math.min(i, filteredData.length - 1);
       if (dataIndex >= 0 && dataIndex < filteredData.length && i % labelInterval === 0) {
         ctx.save();
@@ -180,7 +160,6 @@ export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, 
       }
     }
 
-    // Draw reference lines (avg, max, min)
     const drawReferenceLine = (value, color, label) => {
       const y = padding.top + chartHeight - ((value - minValue) / valueRange) * chartHeight;
       
@@ -193,7 +172,6 @@ export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, 
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Label
       ctx.fillStyle = color;
       ctx.font = '600 11px Inter, sans-serif';
       ctx.textAlign = 'left';
@@ -204,23 +182,19 @@ export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, 
     drawReferenceLine(maxValue, '#ef4444', `Max: ${maxValue.toFixed(2)}`);
     drawReferenceLine(minValue, '#3b82f6', `Min: ${minValue.toFixed(2)}`);
 
-    // Draw X and Y axes
     ctx.strokeStyle = axisColor;
     ctx.lineWidth = 2;
     
-    // Y-axis
     ctx.beginPath();
     ctx.moveTo(padding.left, padding.top);
     ctx.lineTo(padding.left, padding.top + chartHeight);
     ctx.stroke();
     
-    // X-axis
     ctx.beginPath();
     ctx.moveTo(padding.left, padding.top + chartHeight);
     ctx.lineTo(padding.left + chartWidth, padding.top + chartHeight);
     ctx.stroke();
 
-    // Y-axis label
     ctx.save();
     ctx.translate(15, padding.top + chartHeight / 2);
     ctx.rotate(-Math.PI / 2);
@@ -230,12 +204,10 @@ export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, 
     ctx.fillText(`${title} (${unit})`, 0, 0);
     ctx.restore();
 
-    // Only draw up to animationProgress (ensure at least 2 points for drawing a line)
     const visibleDataCount = Math.max(2, Math.floor(filteredData.length * animationProgress));
     const visibleData = filteredData.slice(0, visibleDataCount);
 
     if (visibleData.length > 0) {
-      // Draw area under the line with gradient
       const gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartHeight);
       gradient.addColorStop(0, color + '50');
       gradient.addColorStop(0.5, color + '20');
@@ -243,7 +215,6 @@ export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, 
 
       ctx.beginPath();
       visibleData.forEach((point, index) => {
-        // Use expectedPoints for consistent spacing
         const x = padding.left + (chartWidth / expectedPoints) * index;
         const y = padding.top + chartHeight - ((point.value - minValue) / valueRange) * chartHeight;
         
@@ -254,7 +225,6 @@ export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, 
         }
       });
 
-      // Close the path
       const lastVisibleIndex = visibleData.length - 1;
       const lastX = padding.left + (chartWidth / expectedPoints) * lastVisibleIndex;
       ctx.lineTo(lastX, padding.top + chartHeight);
@@ -263,7 +233,6 @@ export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, 
       ctx.fillStyle = gradient;
       ctx.fill();
 
-      // Draw smooth line with shadow
       ctx.shadowColor = color + '40';
       ctx.shadowBlur = 10;
       ctx.shadowOffsetY = 3;
@@ -275,7 +244,6 @@ export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, 
       ctx.lineCap = 'round';
 
       visibleData.forEach((point, index) => {
-        // Use expectedPoints for consistent spacing
         const x = padding.left + (chartWidth / expectedPoints) * index;
         const y = padding.top + chartHeight - ((point.value - minValue) / valueRange) * chartHeight;
         
@@ -291,14 +259,11 @@ export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, 
       ctx.shadowBlur = 0;
       ctx.shadowOffsetY = 0;
 
-      // Draw points
       visibleData.forEach((point, index) => {
-        // Use expectedPoints for consistent spacing
         const x = padding.left + (chartWidth / expectedPoints) * index;
         const y = padding.top + chartHeight - ((point.value - minValue) / valueRange) * chartHeight;
 
         if (index === visibleData.length - 1) {
-          // Last point - larger
           ctx.beginPath();
           ctx.arc(x, y, 8, 0, 2 * Math.PI);
           ctx.fillStyle = color + '30';
@@ -315,7 +280,6 @@ export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, 
           ctx.lineWidth = 2.5;
           ctx.stroke();
         } else if (index % 3 === 0) {
-          // Show every 3rd point
           ctx.beginPath();
           ctx.arc(x, y, 3, 0, 2 * Math.PI);
           ctx.fillStyle = color;
@@ -326,7 +290,6 @@ export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, 
 
   }, [filteredData, color, animationProgress, maxValue, minValue, avgValue, title, unit, expectedPoints]);
 
-  // Animation effect
   useEffect(() => {
     let startTime = null;
     const duration = 1500; // 1.5 seconds
@@ -345,7 +308,6 @@ export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, 
       }
     };
 
-    // Start from 0 and animate to 1
     setAnimationProgress(0);
     animationFrameRef.current = requestAnimationFrame(animate);
 
@@ -356,7 +318,6 @@ export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, 
     };
   }, [timeFilter]); // Re-animate when filter changes
 
-  // Handle mouse move for tooltip
   const handleMouseMove = (e) => {
     if (!filteredData || filteredData.length === 0) return;
 
@@ -378,15 +339,10 @@ export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, 
     }
 
     const relativeX = mouseX - padding.left;
-    // Use expectedPoints for consistent spacing calculation
     const dataIndex = Math.round((relativeX / chartWidth) * expectedPoints);
     
-    // Calculate visible data count based on animation progress
     const visibleDataCount = Math.max(2, Math.floor(filteredData.length * animationProgress));
     
-    // Only show tooltip if:
-    // 1. We have data at this index in filteredData
-    // 2. The data point has been animated (rendered) already
     if (dataIndex >= 0 && dataIndex < filteredData.length && dataIndex < visibleDataCount) {
       const point = filteredData[dataIndex];
       const valueRange = maxValue - minValue || 1;
@@ -409,7 +365,17 @@ export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, 
     setTooltip({ show: false, x: 0, y: 0, value: 0, time: '' });
   };
 
-  // Custom tooltip - REMOVED (replaced with canvas tooltip)
+  if (!data || data.length === 0) {
+    return (
+      <div className="absolute inset-0 overflow-y-auto overflow-x-hidden bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-900 dark:to-slate-800">
+        <div className="min-h-full p-2 sm:p-4 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-gray-500 dark:text-gray-400">No data available</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="absolute inset-0 overflow-y-auto overflow-x-hidden bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-900 dark:to-slate-800">

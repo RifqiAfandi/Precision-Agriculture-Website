@@ -23,7 +23,8 @@ import {
   Minus,
 } from "lucide-react";
 import { currentGHCompaxData } from "@/features/ghcompax/data/ghcompaxData";
-import { currentWeatherData } from "@/features/skyvera/data/skyveraData";
+import { fetchSkyveraInitial } from "@/features/skyvera/data/skyveraData";
+import { useState, useEffect } from "react";
 
 export function WelcomePage() {
   const navigate = useNavigate();
@@ -121,50 +122,66 @@ export function WelcomePage() {
   ];
 
   // SkyVera - Critical Metrics Only
+  const [currentWeather, setCurrentWeather] = useState({ temperature: 0, humidity: 0, windSpeed: 0, co2: 0 });
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const initial = await fetchSkyveraInitial();
+        if (!mounted) return;
+        setCurrentWeather(initial.currentWeatherData || {});
+      } catch (err) {
+        console.error('WelcomePage: fetchSkyveraInitial failed', err);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
   const skyVeraCritical = [
     {
       label: "Temperature",
-      value: currentWeatherData.temperature?.toFixed(1) || "0.0",
+      value: currentWeather.temperature?.toFixed(1) || "0.0",
       unit: "°C",
       icon: Thermometer,
       status: "normal",
       trend: "up",
       change: "+0.4",
       priority: "high",
-      sparkline: generateSparklineData(currentWeatherData.temperature || 0, 2),
+      sparkline: generateSparklineData(currentWeather.temperature || 0, 2),
     },
     {
       label: "Humidity",
-      value: Math.round(currentWeatherData.humidity || 0),
+      value: Math.round(currentWeather.humidity || 0),
       unit: "%",
       icon: Droplets,
       status: "normal",
       trend: "stable",
       change: "0.0",
       priority: "high",
-      sparkline: generateSparklineData(currentWeatherData.humidity || 0, 4),
+      sparkline: generateSparklineData(currentWeather.humidity || 0, 4),
     },
     {
       label: "Kec. Angin",
-      value: currentWeatherData.windSpeed?.toFixed(1) || "0.0",
+      value: currentWeather.windSpeed?.toFixed(1) || "0.0",
       unit: "km/h",
       icon: Activity,
       status: "normal",
       trend: "up",
       change: "+1.2",
       priority: "medium",
-      sparkline: generateSparklineData(parseFloat(currentWeatherData.windSpeed || 0), 2.5),
+      sparkline: generateSparklineData(parseFloat(currentWeather.windSpeed || 0), 2.5),
     },
     {
       label: "eCO₂",
-      value: currentWeatherData.co2 || 0,
+      value: currentWeather.co2 || 0,
       unit: "ppm",
       icon: CheckCircle2,
       status: "normal",
       trend: "stable",
       change: "0",
       priority: "medium",
-      sparkline: generateSparklineData(currentWeatherData.co2 || 0, 10),
+      sparkline: generateSparklineData(currentWeather.co2 || 0, 10),
     },
   ];
 

@@ -14,9 +14,6 @@ export function useRealtimeMonitoring(
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const intervalRef = useRef(null);
 
-  /**
-   * Update all chart data sets with new data point
-   */
   const updateChartData = useCallback((newRealtimeData) => {
     const now = new Date();
     const newTime = now.toLocaleTimeString('en-US', { 
