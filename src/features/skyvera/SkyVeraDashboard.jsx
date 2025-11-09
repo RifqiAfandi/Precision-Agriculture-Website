@@ -7,141 +7,148 @@ import { LineChart } from "@/features/ghcompax/components/LineChart";
 import { LineChartCard } from "./components/LineChartCard";
 import { DetailChartView } from "./components/DetailChartView";
 import {
-  weatherStations,
-  currentWeatherData,
-  windSpeedData,
-  rainfallData,
-  temperatureHistoryData,
-  humidityHistoryData,
-  windSpeedHistoryData,
-  rainfallHistoryData,
-  co2HistoryData,
-  tvocHistoryData,
-  updateSkyVeraData,
+  fetchSkyveraInitial,
+  subscribeSkyveraRealtime,
+  subscribeAllSkyveraData,
   getParameterStatus,
   getStatusLabel,
   getWeatherStats,
 } from "./data/skyveraData";
 
 const SkyVeraDashboard = () => {
-  const [realtimeData, setRealtimeData] = useState(currentWeatherData);
-  const [windData, setWindData] = useState(windSpeedData);
-  const [rainData, setRainData] = useState(rainfallData);
-  const [tempData, setTempData] = useState(windSpeedData.map(d => ({ ...d, value: Math.random() * 5 + 28 })));
-  const [humidData, setHumidData] = useState(windSpeedData.map(d => ({ ...d, value: Math.random() * 10 + 70 })));
-  const [tvocData, setTvocData] = useState(windSpeedData.map(d => ({ ...d, value: Math.random() * 0.3 + 0.2 })));
-  const [co2Data, setCo2Data] = useState(windSpeedData.map(d => ({ ...d, value: Math.random() * 50 + 400 })));
+  const [realtimeData, setRealtimeData] = useState({ lastUpdate: new Date().toLocaleString('en-US') });
+  const [windData, setWindData] = useState([]);
+  const [rainData, setRainData] = useState([]);
+  const [tempData, setTempData] = useState([]);
+  const [humidData, setHumidData] = useState([]);
+  const [tvocData, setTvocData] = useState([]);
+  const [co2Data, setCo2Data] = useState([]);
+  const [weatherStations, setWeatherStations] = useState([]);
+  const [temperatureHistoryData, setTemperatureHistoryData] = useState([]);
+  const [humidityHistoryData, setHumidityHistoryData] = useState([]);
+  const [windSpeedHistoryData, setWindSpeedHistoryData] = useState([]);
+  const [rainfallHistoryData, setRainfallHistoryData] = useState([]);
+  const [co2HistoryData, setCo2HistoryData] = useState([]);
+  const [tvocHistoryData, setTvocHistoryData] = useState([]);
+  const [loading, setLoading] = useState(true);
   
-  // Chart mode: 'detail2', 'detail4', 'history'
   const [chartMode, setChartMode] = useState('detail2');
   const [lastHistoryUpdate, setLastHistoryUpdate] = useState(new Date());
   
-  // New state for detail view
-  const [viewMode, setViewMode] = useState('overview'); // 'overview' or 'detail'
-  const [selectedChart, setSelectedChart] = useState(null); // null or chart object
+  const [viewMode, setViewMode] = useState('overview'); 
+  const [selectedChart, setSelectedChart] = useState(null);
   
-  // Animation state
   const [isLoaded, setIsLoaded] = useState(false);
   
-  const stats = getWeatherStats();
+  const stats = getWeatherStats(weatherStations);
 
-  // Initial load animation
   useEffect(() => {
     setIsLoaded(true);
   }, []);
 
-  // Update data setiap 60 detik (1 menit) - hanya untuk mode detail2 dan detail4
   useEffect(() => {
-    if (chartMode === 'history') return; // Skip real-time update in history mode
-    
-    const interval = setInterval(() => {
-      const newData = updateSkyVeraData(realtimeData);
-      setRealtimeData(newData);
+    let mounted = true;
+    (async () => {
+      try {
+        const initial = await fetchSkyveraInitial();
+        if (!mounted) return;
 
-      // Update chart data - shift left and add new data
-      const now = new Date();
-      const newTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        setWindData(initial.windSpeedData || []);
+        setRainData(initial.rainfallData || []);
+        setTempData((initial.temperatureHistoryData || []).slice(-20).map(d => ({ ...d })));
+        setHumidData((initial.humidityHistoryData || []).slice(-20).map(d => ({ ...d })));
+        setTvocData((initial.tvocHistoryData || []).slice(-20).map(d => ({ ...d })));
+        setCo2Data((initial.co2HistoryData || []).slice(-20).map(d => ({ ...d })));
 
-      setWindData(prev => {
-        const newWindSpeed = newData.windSpeed || (prev[prev.length - 1].value + (Math.random() - 0.5) * 2);
-        const newArr = [...prev.slice(1), {
-          time: newTime,
-          value: parseFloat(newWindSpeed.toFixed(2)),
-          timestamp: now.getTime(),
-        }];
-        return newArr;
+        setTemperatureHistoryData(initial.temperatureHistoryData || []);
+        setHumidityHistoryData(initial.humidityHistoryData || []);
+        setWindSpeedHistoryData(initial.windSpeedHistoryData || []);
+        setRainfallHistoryData(initial.rainfallHistoryData || []);
+        setCo2HistoryData(initial.co2HistoryData || []);
+        setTvocHistoryData(initial.tvocHistoryData || []);
+
+        setWeatherStations(initial.weatherStations || []);
+        setRealtimeData(initial.currentWeatherData || { lastUpdate: new Date().toLocaleString('en-US') });
+      } catch (err) {
+        console.error('Error loading initial SkyVera data', err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    let unsubscribe = null;
+    try {
+      unsubscribe = subscribeAllSkyveraData((data) => {
+        if (!data) return;
+        
+        setWindData(data.windSpeedData || []);
+        setRainData(data.rainfallData || []);
+        setTempData((data.temperatureData || []).slice(-20));
+        setHumidData((data.humidityData || []).slice(-20));
+        setTvocData((data.tvocData || []).slice(-20));
+        setCo2Data((data.co2Data || []).slice(-20));
+        
+        setTemperatureHistoryData(data.temperatureData || []);
+        setHumidityHistoryData(data.humidityData || []);
+        setWindSpeedHistoryData(data.windSpeedData || []);
+        setRainfallHistoryData(data.rainfallData || []);
+        setCo2HistoryData(data.co2Data || []);
+        setTvocHistoryData(data.tvocData || []);
+        
+        if (data.currentWeatherData) {
+          setRealtimeData(data.currentWeatherData);
+          
+          setWeatherStations([{
+            id: 'ws1',
+            name: 'SkyVera Station #1',
+            location: 'Area Monitoring',
+            altitude: 125,
+            stationType: 'Professional',
+            currentTemp: data.currentWeatherData.temperature,
+            currentHumidity: data.currentWeatherData.humidity,
+            currentWindSpeed: data.currentWeatherData.windSpeed,
+            currentRainfall: data.currentWeatherData.rainfall,
+            currentCO2: data.currentWeatherData.co2,
+            currentTVOC: data.currentWeatherData.tvoc,
+            lastUpdate: data.currentWeatherData.lastUpdate,
+            status: 'good',
+          }]);
+        }
       });
+    } catch (err) {
+      console.error('subscribeAllSkyveraData failed', err);
+    }
 
-      setRainData(prev => {
-        const newRainfall = newData.rainfall || (prev[prev.length - 1].value + (Math.random() - 0.5) * 1);
-        const newArr = [...prev.slice(1), {
-          time: newTime,
-          value: Math.max(0, parseFloat(newRainfall.toFixed(2))),
-          timestamp: now.getTime(),
-        }];
-        return newArr;
-      });
+    return () => {
+      try {
+        if (typeof unsubscribe === 'function') unsubscribe();
+      } catch (e) {
+        console.error('Error unsubscribing', e);
+      }
+    };
+  }, []);
 
-      setTempData(prev => {
-        const newArr = [...prev.slice(1), {
-          time: newTime,
-          value: newData.temperature,
-          timestamp: now.getTime(),
-        }];
-        return newArr;
-      });
 
-      setHumidData(prev => {
-        const newArr = [...prev.slice(1), {
-          time: newTime,
-          value: newData.humidity,
-          timestamp: now.getTime(),
-        }];
-        return newArr;
-      });
 
-      setTvocData(prev => {
-        const newArr = [...prev.slice(1), {
-          time: newTime,
-          value: newData.tvoc,
-          timestamp: now.getTime(),
-        }];
-        return newArr;
-      });
-
-      setCo2Data(prev => {
-        const newArr = [...prev.slice(1), {
-          time: newTime,
-          value: newData.co2,
-          timestamp: now.getTime(),
-        }];
-        return newArr;
-      });
-    }, 60000); // 60 seconds
-
-    return () => clearInterval(interval);
-  }, [realtimeData, chartMode]);
-
-  // Handle history mode refresh
   const handleHistoryRefresh = () => {
     setLastHistoryUpdate(new Date());
-    // In real app, fetch historical data from API here
   };
 
-  // Calculate average for history mode
   const calculateAverage = (data) => {
     if (!data || data.length === 0) return 0;
     const sum = data.reduce((acc, item) => acc + item.value, 0);
     return sum / data.length;
   };
 
-  // Get monitoring box value based on mode
   const getBoxValue = (parameter, normalValue) => {
     if (chartMode !== 'history') {
       return normalValue;
     }
 
-    // In history mode, show average
     let dataToUse;
     switch (parameter) {
       case 'windSpeed':
@@ -167,7 +174,6 @@ const SkyVeraDashboard = () => {
     }
 
     const avg = calculateAverage(dataToUse);
-    // Format based on parameter type
     if (parameter === 'humidity' || parameter === 'co2') {
       return Math.round(avg);
     } else {
@@ -178,7 +184,7 @@ const SkyVeraDashboard = () => {
   const monitoringBoxes = [
     {
       title: 'Wind Speed',
-      value: getBoxValue('windSpeed', (realtimeData.windSpeed || 12.5).toFixed(1)),
+      value: getBoxValue('windSpeed', ((realtimeData.windSpeed || 0) || 12.5).toFixed(1)),
       unit: 'km/h',
       icon: Wind,
       parameter: 'windSpeed',
@@ -187,7 +193,7 @@ const SkyVeraDashboard = () => {
     },
     {
       title: 'Rainfall',
-      value: getBoxValue('rainfall', (realtimeData.rainfall || 2.3).toFixed(1)),
+      value: getBoxValue('rainfall', ((realtimeData.rainfall || 0) || 2.3).toFixed(1)),
       unit: 'mm',
       icon: CloudRain,
       parameter: 'rainfall',
@@ -196,7 +202,7 @@ const SkyVeraDashboard = () => {
     },
     {
       title: 'Temperature',
-      value: getBoxValue('temperature', realtimeData.temperature.toFixed(1)),
+      value: getBoxValue('temperature', (realtimeData.temperature || 0).toFixed(1)),
       unit: '°C',
       icon: Thermometer,
       parameter: 'temperature',
@@ -205,7 +211,7 @@ const SkyVeraDashboard = () => {
     },
     {
       title: 'Humidity',
-      value: getBoxValue('humidity', Math.round(realtimeData.humidity)),
+      value: getBoxValue('humidity', Math.round(realtimeData.humidity || 0)),
       unit: '%',
       icon: Droplets,
       parameter: 'humidity',
@@ -214,7 +220,7 @@ const SkyVeraDashboard = () => {
     },
     {
       title: 'TVOC',
-      value: getBoxValue('tvoc', realtimeData.tvoc.toFixed(2)),
+      value: getBoxValue('tvoc', (realtimeData.tvoc || 0).toFixed(2)),
       unit: 'mg/m³',
       icon: Wind,
       parameter: 'tvoc',
@@ -223,7 +229,7 @@ const SkyVeraDashboard = () => {
     },
     {
       title: 'eCO₂',
-      value: getBoxValue('co2', realtimeData.co2),
+      value: getBoxValue('co2', realtimeData.co2 || 0),
       unit: 'ppm',
       icon: Activity,
       parameter: 'co2',
@@ -232,15 +238,11 @@ const SkyVeraDashboard = () => {
     },
   ];
 
-  // Get charts to display based on mode
   const getChartsToDisplay = () => {
-    // Helper function to get last N data points
     const getLastNData = (data, n) => {
       return data.slice(-n);
     };
     
-    // Detail 2 & Detail 4: Use last 20 data points (20 minutes) from real-time data
-    // History: Use last 60 data points (1 hour) from historical data
     const allCharts = [
       { 
         data: chartMode === 'history' ? getLastNData(windSpeedHistoryData, 60) : getLastNData(windData, 20), 
@@ -293,19 +295,15 @@ const SkyVeraDashboard = () => {
     ];
 
     if (chartMode === 'detail2') {
-      return allCharts.slice(0, 2); // Wind Speed & Rainfall
+      return allCharts.slice(0, 2);
     } else if (chartMode === 'detail4') {
-      // Show 4 charts at once: Temperature, Humidity, TVOC, eCO₂
-      return allCharts.slice(2); // Temperature, Humidity, TVOC, eCO₂
+      return allCharts.slice(2); 
     } else {
-      // History mode - show all 6 in grid
       return allCharts;
     }
   };
 
-  // Handler untuk membuka detail view
   const handleChartClick = (chart) => {
-    // Get full historical data for detail view (not just 60 points)
     const fullDataMap = {
       'windSpeed': windSpeedHistoryData,
       'rainfall': rainfallHistoryData,
@@ -322,7 +320,6 @@ const SkyVeraDashboard = () => {
     setViewMode('detail');
   };
 
-  // Handler untuk kembali ke overview
   const handleBackToOverview = () => {
     setViewMode('overview');
     setSelectedChart(null);
@@ -478,7 +475,6 @@ const SkyVeraDashboard = () => {
             : 'grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3'
         }>
         {chartMode === 'history' ? (
-          // Use LineChartCard for history mode (clickable)
           getChartsToDisplay().map((chart, index) => (
             <LineChartCard
               key={`history-${chart.title}-${index}`}
@@ -491,7 +487,6 @@ const SkyVeraDashboard = () => {
             />
           ))
         ) : (
-          // Use LineChartCard for detail2 and detail4 mode (NOT clickable - only display)
           getChartsToDisplay().map((chart, index) => (
             <LineChartCard
               key={`${chartMode}-${chart.title}-${index}`}

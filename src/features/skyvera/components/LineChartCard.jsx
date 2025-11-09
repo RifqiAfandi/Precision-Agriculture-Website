@@ -7,14 +7,11 @@ export function LineChartCard({ data, title, unit, color = '#3b82f6', icon: Icon
   const animationFrameRef = useRef(null);
   const [animationProgress, setAnimationProgress] = useState(0);
 
-  if (!data || data.length === 0) return null;
-
-  const currentValue = data[data.length - 1].value;
-  const previousValue = data.length > 1 ? data[data.length - 2].value : currentValue;
+  const currentValue = (data && data.length > 0) ? data[data.length - 1].value : 0;
+  const previousValue = (data && data.length > 1) ? data[data.length - 2].value : currentValue;
   const change = currentValue - previousValue;
   const changePercent = previousValue !== 0 ? (change / previousValue * 100) : 0;
 
-  // Canvas drawing effect
   useEffect(() => {
     if (!data || data.length === 0) return;
 
@@ -25,31 +22,25 @@ export function LineChartCard({ data, title, unit, color = '#3b82f6', icon: Icon
     const rect = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
 
-    // Set canvas size with device pixel ratio
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
     ctx.scale(dpr, dpr);
 
-    // Clear canvas
     ctx.clearRect(0, 0, rect.width, rect.height);
 
-    // Chart dimensions with more bottom padding for x-axis labels
     const padding = { top: 10, right: 10, bottom: 25, left: 35 };
     const chartWidth = rect.width - padding.left - padding.right;
     const chartHeight = rect.height - padding.top - padding.bottom;
 
-    // Get min and max values
     const values = data.map(d => d.value);
     const minValue = Math.min(...values);
     const maxValue = Math.max(...values);
     const valueRange = maxValue - minValue || 1;
 
-    // Detect dark mode
     const isDarkMode = document.documentElement.classList.contains('dark');
     const gridColor = isDarkMode ? '#374151' : '#f5f5f5';
     const textColor = isDarkMode ? '#9ca3af' : '#9ca3af';
 
-    // Draw grid lines (horizontal) - lighter
     ctx.strokeStyle = gridColor;
     ctx.lineWidth = 1;
     for (let i = 0; i <= 3; i++) {
@@ -59,7 +50,6 @@ export function LineChartCard({ data, title, unit, color = '#3b82f6', icon: Icon
       ctx.lineTo(padding.left + chartWidth, y);
       ctx.stroke();
 
-      // Draw y-axis labels
       const value = maxValue - (valueRange / 3) * i;
       ctx.fillStyle = textColor;
       ctx.font = '600 9px Inter, sans-serif';
@@ -67,23 +57,19 @@ export function LineChartCard({ data, title, unit, color = '#3b82f6', icon: Icon
       ctx.fillText(value.toFixed(0), padding.left - 5, y + 3);
     }
 
-    // Draw X and Y axis lines
     ctx.strokeStyle = isDarkMode ? '#4b5563' : '#d1d5db';
     ctx.lineWidth = 1.5;
     
-    // Y-axis
     ctx.beginPath();
     ctx.moveTo(padding.left, padding.top);
     ctx.lineTo(padding.left, padding.top + chartHeight);
     ctx.stroke();
     
-    // X-axis
     ctx.beginPath();
     ctx.moveTo(padding.left, padding.top + chartHeight);
     ctx.lineTo(padding.left + chartWidth, padding.top + chartHeight);
     ctx.stroke();
 
-    // Draw X-axis labels (time)
     const labelInterval = Math.max(1, Math.floor(data.length / 4)); // Show ~5 labels
     ctx.fillStyle = textColor;
     ctx.font = '600 9px Inter, sans-serif';
@@ -92,18 +78,15 @@ export function LineChartCard({ data, title, unit, color = '#3b82f6', icon: Icon
       const x = padding.left + (chartWidth / (data.length - 1)) * i;
       ctx.fillText(data[i].time, x, padding.top + chartHeight + 15);
     }
-    // Always show last label
     if (data.length > 0) {
       const lastX = padding.left + chartWidth;
       ctx.fillText(data[data.length - 1].time, lastX, padding.top + chartHeight + 15);
     }
 
-    // Only draw up to animationProgress
     const visibleDataCount = Math.floor(data.length * animationProgress);
     const visibleData = data.slice(0, Math.max(1, visibleDataCount));
 
     if (visibleData.length > 0) {
-      // Draw area under the line with gradient
       const gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartHeight);
       gradient.addColorStop(0, color + '40');
       gradient.addColorStop(1, color + '00');
@@ -120,7 +103,6 @@ export function LineChartCard({ data, title, unit, color = '#3b82f6', icon: Icon
         }
       });
 
-      // Close the path to bottom
       const lastVisibleIndex = visibleData.length - 1;
       const lastX = padding.left + (chartWidth / (data.length - 1)) * lastVisibleIndex;
       ctx.lineTo(lastX, padding.top + chartHeight);
@@ -129,7 +111,6 @@ export function LineChartCard({ data, title, unit, color = '#3b82f6', icon: Icon
       ctx.fillStyle = gradient;
       ctx.fill();
 
-      // Draw smooth line
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
       ctx.lineJoin = 'round';
@@ -149,26 +130,22 @@ export function LineChartCard({ data, title, unit, color = '#3b82f6', icon: Icon
 
       ctx.stroke();
 
-      // Draw point at the end
       if (visibleData.length > 0) {
         const lastPoint = visibleData[visibleData.length - 1];
         const lastIndex = visibleData.length - 1;
         const x = padding.left + (chartWidth / (data.length - 1)) * lastIndex;
         const y = padding.top + chartHeight - ((lastPoint.value - minValue) / valueRange) * chartHeight;
 
-        // Outer glow
         ctx.beginPath();
         ctx.arc(x, y, 6, 0, 2 * Math.PI);
         ctx.fillStyle = color + '30';
         ctx.fill();
         
-        // Main point
         ctx.beginPath();
         ctx.arc(x, y, 3.5, 0, 2 * Math.PI);
         ctx.fillStyle = color;
         ctx.fill();
         
-        // Inner highlight
         ctx.beginPath();
         ctx.arc(x, y, 3.5, 0, 2 * Math.PI);
         ctx.strokeStyle = '#fff';
@@ -179,7 +156,6 @@ export function LineChartCard({ data, title, unit, color = '#3b82f6', icon: Icon
 
   }, [data, color, animationProgress]);
 
-  // Animation effect
   useEffect(() => {
     let startTime = null;
     const duration = 1000; // 1 second animation (faster for cards)
@@ -208,7 +184,6 @@ export function LineChartCard({ data, title, unit, color = '#3b82f6', icon: Icon
     };
   }, [data]);
 
-  // Handle mouse move for tooltip
   const handleMouseMove = (e) => {
     if (!data || data.length === 0) return;
 
@@ -256,6 +231,16 @@ export function LineChartCard({ data, title, unit, color = '#3b82f6', icon: Icon
     setTooltip({ show: false, x: 0, y: 0, value: 0, time: '' });
   };
 
+  if (!data || data.length === 0) {
+    return (
+      <div className="relative bg-white dark:bg-card rounded-xl border border-gray-200 dark:border-border shadow-sm p-6">
+        <div className="text-center text-gray-500 dark:text-gray-400">
+          <p className="text-sm">No data available</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div 
       onClick={onClick || undefined}
@@ -298,12 +283,12 @@ export function LineChartCard({ data, title, unit, color = '#3b82f6', icon: Icon
             </div>
             <div className="text-right">
               <div className="text-xl font-bold tracking-tight" style={{ color }}>
-                {currentValue.toFixed(1)}
+                {(currentValue || 0).toFixed(1)}
                 <span className="text-sm font-medium text-gray-500 dark:text-gray-400 ml-1">{unit}</span>
               </div>
               <div className={`text-xs font-semibold flex items-center justify-end ${change >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                 <span>{change >= 0 ? '↑' : '↓'}</span>
-                <span className="ml-0.5">{Math.abs(changePercent).toFixed(1)}%</span>
+                <span className="ml-0.5">{Math.abs(changePercent || 0).toFixed(1)}%</span>
               </div>
             </div>
           </div>
@@ -342,7 +327,7 @@ export function LineChartCard({ data, title, unit, color = '#3b82f6', icon: Icon
                 >
                   <div className="bg-gray-900 dark:bg-gray-800 text-white px-2.5 py-1.5 rounded-lg shadow-xl border border-gray-700">
                     <div className="text-xs font-bold mb-0.5" style={{ color }}>
-                      {tooltip.value.toFixed(2)} {unit}
+                      {(tooltip.value || 0).toFixed(2)} {unit}
                     </div>
                     <div className="text-xs text-gray-300">
                       {tooltip.time}
