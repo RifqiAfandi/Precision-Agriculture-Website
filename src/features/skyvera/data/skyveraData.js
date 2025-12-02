@@ -1,248 +1,201 @@
-import firebaseService from '@/services/firebase';
+// SkyVera Data - Monitoring Data Dummy (similar to GHCompax)
 
-const convertFirebaseDataToArray = (firebaseData) => {
-  if (!firebaseData) return [];
-  
-  if (Array.isArray(firebaseData)) return firebaseData;
-  
-  const entries = Object.entries(firebaseData)
-    .sort(([keyA], [keyB]) => parseInt(keyA) - parseInt(keyB));
-  
+// Generate time series data
+const generateTimeSeriesData = (baseValue, variance, dataPoints = 20) => {
+  const data = [];
   const now = new Date();
-  const totalEntries = entries.length;
   
-  return entries.map(([key, value], index) => {
-    const minutesAgo = totalEntries - 1 - index;
-    const calculatedTime = new Date(now.getTime() - (minutesAgo * 60000));
-    
-    const time = calculatedTime.toLocaleTimeString('en-US', { 
+  for (let i = 0; i < dataPoints; i++) {
+    const minutesAgo = dataPoints - 1 - i;
+    const timestamp = new Date(now.getTime() - minutesAgo * 60000);
+    const time = timestamp.toLocaleTimeString('en-US', { 
       hour: '2-digit', 
       minute: '2-digit',
       second: '2-digit',
       hour12: true 
     });
-    
-    return {
+    const value = baseValue + (Math.random() - 0.5) * variance;
+    data.push({
       time,
-      timestamp: calculatedTime.getTime(),
-      value: parseFloat(value.value || value) || 0,
-      windSpeed: parseFloat(value.windSpeed) || 0,
-      rainfall: parseFloat(value.rainfall) || 0,
-      temperature: parseFloat(value.temperature) || 0,
-      humidity: parseFloat(value.humidity) || 0,
-      eco2: parseFloat(value.eco2) || 0,
-      tvoc: parseFloat(value.tvoc) || 0
-    };
+      value: parseFloat(value.toFixed(2)),
+      timestamp: timestamp.getTime(),
+    });
+  }
+  
+  return data;
+};
+
+// Generate historical data (untuk history mode)
+export const generateHistoricalData = (baseValue, variance, hours = 24) => {
+  const dataPoints = hours * 6; // 6 data points per jam
+  return generateTimeSeriesData(baseValue, variance, dataPoints);
+};
+
+// Inisialisasi data array untuk subscription
+let liveWindSpeedData = generateTimeSeriesData(12.5, 8, 60);
+let liveRainfallData = generateTimeSeriesData(2.3, 3, 60);
+let liveTemperatureData = generateTimeSeriesData(28.5, 5, 60);
+let liveHumidityData = generateTimeSeriesData(75, 15, 60);
+let liveTvocData = generateTimeSeriesData(0.35, 0.5, 60);
+let liveCo2Data = generateTimeSeriesData(450, 100, 60);
+
+// Real-time subscription
+let realtimeSubscribers = [];
+let realtimeInterval = null;
+
+// Fungsi untuk menambahkan data baru (smooth append)
+const appendNewDataPoint = () => {
+  const now = new Date();
+  const time = now.toLocaleTimeString('en-US', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true 
+  });
+  const timestamp = now.getTime();
+
+  // Generate nilai baru berdasarkan nilai terakhir
+  const lastWindSpeed = liveWindSpeedData[liveWindSpeedData.length - 1].value;
+  const lastRainfall = liveRainfallData[liveRainfallData.length - 1].value;
+  const lastTemp = liveTemperatureData[liveTemperatureData.length - 1].value;
+  const lastHumid = liveHumidityData[liveHumidityData.length - 1].value;
+  const lastTvoc = liveTvocData[liveTvocData.length - 1].value;
+  const lastCo2 = liveCo2Data[liveCo2Data.length - 1].value;
+
+  // Tambahkan variasi kecil
+  const newWindSpeed = parseFloat(Math.max(0, lastWindSpeed + (Math.random() - 0.5) * 2).toFixed(2));
+  const newRainfall = parseFloat(Math.max(0, lastRainfall + (Math.random() - 0.5) * 0.5).toFixed(2));
+  const newTemp = parseFloat((lastTemp + (Math.random() - 0.5) * 1).toFixed(2));
+  const newHumid = parseFloat((lastHumid + (Math.random() - 0.5) * 2).toFixed(2));
+  const newTvoc = parseFloat(Math.max(0.1, lastTvoc + (Math.random() - 0.5) * 0.05).toFixed(2));
+  const newCo2 = Math.round(Math.max(350, lastCo2 + (Math.random() - 0.5) * 15));
+
+  // Append data baru
+  liveWindSpeedData.push({ time, value: newWindSpeed, timestamp });
+  liveRainfallData.push({ time, value: newRainfall, timestamp });
+  liveTemperatureData.push({ time, value: newTemp, timestamp });
+  liveHumidityData.push({ time, value: newHumid, timestamp });
+  liveTvocData.push({ time, value: newTvoc, timestamp });
+  liveCo2Data.push({ time, value: newCo2, timestamp });
+
+  // Keep only last 60 minutes
+  if (liveWindSpeedData.length > 60) {
+    liveWindSpeedData.shift();
+    liveRainfallData.shift();
+    liveTemperatureData.shift();
+    liveHumidityData.shift();
+    liveTvocData.shift();
+    liveCo2Data.shift();
+  }
+
+  // Notify subscribers
+  const newData = {
+    windSpeedData: [...liveWindSpeedData],
+    rainfallData: [...liveRainfallData],
+    temperatureData: [...liveTemperatureData],
+    humidityData: [...liveHumidityData],
+    tvocData: [...liveTvocData],
+    co2Data: [...liveCo2Data],
+    currentWeatherData: {
+      windSpeed: newWindSpeed,
+      rainfall: newRainfall,
+      temperature: newTemp,
+      humidity: newHumid,
+      tvoc: newTvoc,
+      co2: newCo2,
+      lastUpdate: now.toLocaleString('en-US'),
+    },
+  };
+
+  realtimeSubscribers.forEach(callback => {
+    try {
+      callback(newData);
+    } catch (err) {
+      console.error('Error in subscriber callback', err);
+    }
   });
 };
 
-const extractCurrentData = (realtimeData) => {
-  if (!realtimeData) return null;
-  
-  const entries = Object.entries(realtimeData)
-    .sort(([keyA], [keyB]) => parseInt(keyA) - parseInt(keyB));
-    
-  if (entries.length === 0) return null;
-  
-  const [, latest] = entries[entries.length - 1];
-  const now = new Date();
-  
-  return {
-    windSpeed: parseFloat(latest.windSpeed) || 0,
-    rainfall: parseFloat(latest.rainfall) || 0,
-    temperature: parseFloat(latest.temperature) || 0,
-    humidity: parseFloat(latest.humidity) || 0,
-    co2: parseFloat(latest.eco2) || 0,
-    tvoc: parseFloat(latest.tvoc) || 0,
-    lastUpdate: now.toLocaleString('en-US'),
-  };
-};
-
+// Fetch initial data
 export async function fetchSkyveraInitial() {
-  try {
-    const realtimeData = await firebaseService.fetchPath('/realtime_data');
-    
-    if (!realtimeData) {
-      console.warn('No data found in Firebase path /realtime_data');
-      return {
-        windSpeedData: [],
-        rainfallData: [],
-        temperatureHistoryData: [],
-        humidityHistoryData: [],
-        windSpeedHistoryData: [],
-        rainfallHistoryData: [],
-        co2HistoryData: [],
-        tvocHistoryData: [],
-        weatherStations: [],
-        currentWeatherData: {
-          windSpeed: 0,
-          rainfall: 0,
-          temperature: 0,
-          humidity: 0,
-          co2: 0,
-          tvoc: 0,
-          lastUpdate: new Date().toLocaleString('en-US'),
-        },
-      };
-    }
-
-    const dataArray = convertFirebaseDataToArray(realtimeData);
-    
-    const windSpeedData = dataArray.map(d => ({
-      time: d.time,
-      timestamp: d.timestamp,
-      value: parseFloat(d.windSpeed) || 0
-    }));
-    
-    const rainfallData = dataArray.map(d => ({
-      time: d.time,
-      timestamp: d.timestamp,
-      value: parseFloat(d.rainfall) || 0
-    }));
-    
-    const temperatureHistoryData = dataArray.map(d => ({
-      time: d.time,
-      timestamp: d.timestamp,
-      value: parseFloat(d.temperature) || 0
-    }));
-    
-    const humidityHistoryData = dataArray.map(d => ({
-      time: d.time,
-      timestamp: d.timestamp,
-      value: parseFloat(d.humidity) || 0
-    }));
-    
-    const co2HistoryData = dataArray.map(d => ({
-      time: d.time,
-      timestamp: d.timestamp,
-      value: parseFloat(d.eco2) || 0
-    }));
-    
-    const tvocHistoryData = dataArray.map(d => ({
-      time: d.time,
-      timestamp: d.timestamp,
-      value: parseFloat(d.tvoc) || 0
-    }));
-
-    const currentWeatherData = extractCurrentData(realtimeData) || {
-      windSpeed: 0,
-      rainfall: 0,
-      temperature: 0,
-      humidity: 0,
-      co2: 0,
-      tvoc: 0,
-      lastUpdate: new Date().toLocaleString('en-US'),
-    };
-
-    const weatherStations = [{
+  return {
+    windSpeedData: [...liveWindSpeedData],
+    rainfallData: [...liveRainfallData],
+    temperatureHistoryData: [...liveTemperatureData],
+    humidityHistoryData: [...liveHumidityData],
+    windSpeedHistoryData: [...liveWindSpeedData],
+    rainfallHistoryData: [...liveRainfallData],
+    co2HistoryData: [...liveCo2Data],
+    tvocHistoryData: [...liveTvocData],
+    weatherStations: [{
       id: 'ws1',
       name: 'SkyVera Station #1',
       location: 'Area Monitoring',
       altitude: 125,
       stationType: 'Professional',
-      currentTemp: currentWeatherData.temperature,
-      currentHumidity: currentWeatherData.humidity,
-      currentWindSpeed: currentWeatherData.windSpeed,
-      currentRainfall: currentWeatherData.rainfall,
-      currentCO2: currentWeatherData.co2,
-      currentTVOC: currentWeatherData.tvoc,
-      lastUpdate: currentWeatherData.lastUpdate,
+      currentTemp: liveTemperatureData[liveTemperatureData.length - 1].value,
+      currentHumidity: liveHumidityData[liveHumidityData.length - 1].value,
+      currentWindSpeed: liveWindSpeedData[liveWindSpeedData.length - 1].value,
+      currentRainfall: liveRainfallData[liveRainfallData.length - 1].value,
+      currentCO2: liveCo2Data[liveCo2Data.length - 1].value,
+      currentTVOC: liveTvocData[liveTvocData.length - 1].value,
+      lastUpdate: new Date().toLocaleString('en-US'),
       status: 'good',
-    }];
-
-    return {
-      windSpeedData,
-      rainfallData,
-      temperatureHistoryData,
-      humidityHistoryData,
-      windSpeedHistoryData: windSpeedData,
-      rainfallHistoryData: rainfallData,
-      co2HistoryData,
-      tvocHistoryData,
-      weatherStations,
-      currentWeatherData,
-    };
-  } catch (err) {
-    console.error('fetchSkyveraInitial error', err);
-    throw err;
-  }
+    }],
+    currentWeatherData: {
+      windSpeed: liveWindSpeedData[liveWindSpeedData.length - 1].value,
+      rainfall: liveRainfallData[liveRainfallData.length - 1].value,
+      temperature: liveTemperatureData[liveTemperatureData.length - 1].value,
+      humidity: liveHumidityData[liveHumidityData.length - 1].value,
+      co2: liveCo2Data[liveCo2Data.length - 1].value,
+      tvoc: liveTvocData[liveTvocData.length - 1].value,
+      lastUpdate: new Date().toLocaleString('en-US'),
+    },
+  };
 }
 
+// Subscribe untuk real-time updates (dummy - not using Firebase)
 export function subscribeSkyveraRealtime(callback) {
-  try {
-    return firebaseService.subscribePath('/realtime_data', (val) => {
-      if (!val) return;
-      
-      const latest = extractCurrentData(val);
-      if (latest) {
-        callback(latest);
-      }
-    });
-  } catch (err) {
-    console.error('subscribeSkyveraRealtime error', err);
-    return null;
-  }
+  // Deprecated - use subscribeAllSkyveraData instead
+  return () => {};
 }
 
 export function subscribeAllSkyveraData(callback) {
-  try {
-    return firebaseService.subscribePath('/realtime_data', (val) => {
-      if (!val) return;
-      
-      const dataArray = convertFirebaseDataToArray(val);
-      
-      const windSpeedData = dataArray.map(d => ({
-        time: d.time,
-        timestamp: d.timestamp,
-        value: d.windSpeed
-      }));
-      
-      const rainfallData = dataArray.map(d => ({
-        time: d.time,
-        timestamp: d.timestamp,
-        value: d.rainfall
-      }));
-      
-      const temperatureData = dataArray.map(d => ({
-        time: d.time,
-        timestamp: d.timestamp,
-        value: d.temperature
-      }));
-      
-      const humidityData = dataArray.map(d => ({
-        time: d.time,
-        timestamp: d.timestamp,
-        value: d.humidity
-      }));
-      
-      const co2Data = dataArray.map(d => ({
-        time: d.time,
-        timestamp: d.timestamp,
-        value: d.eco2
-      }));
-      
-      const tvocData = dataArray.map(d => ({
-        time: d.time,
-        timestamp: d.timestamp,
-        value: d.tvoc
-      }));
-      
-      const currentWeatherData = extractCurrentData(val);
-      
-      callback({
-        windSpeedData,
-        rainfallData,
-        temperatureData,
-        humidityData,
-        co2Data,
-        tvocData,
-        currentWeatherData,
-      });
-    });
-  } catch (err) {
-    console.error('subscribeAllSkyveraData error', err);
-    return null;
+  realtimeSubscribers.push(callback);
+
+  // Start interval
+  if (!realtimeInterval) {
+    realtimeInterval = setInterval(appendNewDataPoint, 60000); // Update setiap 60 detik
   }
+
+  // Kirim data awal
+  callback({
+    windSpeedData: [...liveWindSpeedData],
+    rainfallData: [...liveRainfallData],
+    temperatureData: [...liveTemperatureData],
+    humidityData: [...liveHumidityData],
+    tvocData: [...liveTvocData],
+    co2Data: [...liveCo2Data],
+    currentWeatherData: {
+      windSpeed: liveWindSpeedData[liveWindSpeedData.length - 1].value,
+      rainfall: liveRainfallData[liveRainfallData.length - 1].value,
+      temperature: liveTemperatureData[liveTemperatureData.length - 1].value,
+      humidity: liveHumidityData[liveHumidityData.length - 1].value,
+      tvoc: liveTvocData[liveTvocData.length - 1].value,
+      co2: liveCo2Data[liveCo2Data.length - 1].value,
+      lastUpdate: new Date().toLocaleString('en-US'),
+    },
+  });
+
+  // Return unsubscribe function
+  return () => {
+    realtimeSubscribers = realtimeSubscribers.filter(cb => cb !== callback);
+    
+    if (realtimeSubscribers.length === 0 && realtimeInterval) {
+      clearInterval(realtimeInterval);
+      realtimeInterval = null;
+    }
+  };
 }
 
 // ============ Utility Functions ============

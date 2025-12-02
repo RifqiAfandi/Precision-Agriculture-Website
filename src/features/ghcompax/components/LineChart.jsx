@@ -6,6 +6,7 @@ export function LineChart({ data, title, unit, color = '#10b981', icon: Icon }) 
   const [tooltip, setTooltip] = useState({ show: false, x: 0, y: 0, value: 0, time: '' });
   const animationFrameRef = useRef(null);
   const [animationProgress, setAnimationProgress] = useState(0);
+  const hasAnimatedRef = useRef(false); // Track if initial animation completed
 
   useEffect(() => {
     if (!data || data.length === 0) return;
@@ -112,9 +113,8 @@ export function LineChart({ data, title, unit, color = '#10b981', icon: Icon }) 
     gradient.addColorStop(0.5, color + '20'); // 20 = ~12% opacity
     gradient.addColorStop(1, color + '00'); // 00 = 0% opacity
 
-    // Only draw up to animationProgress
-    const visibleDataCount = Math.floor(data.length * animationProgress);
-    const visibleData = data.slice(0, Math.max(1, visibleDataCount));
+    // Draw all data (no animation after initial load)
+    const visibleData = hasAnimatedRef.current ? data : data.slice(0, Math.max(1, Math.floor(data.length * animationProgress)));
 
     if (visibleData.length > 0) {
       ctx.beginPath();
@@ -200,10 +200,13 @@ export function LineChart({ data, title, unit, color = '#10b981', icon: Icon }) 
       });
     }
 
-  }, [data, color, animationProgress]);
+  }, [data, color, animationProgress, hasAnimatedRef.current]);
 
-  // Animation effect - grows from 0 to 1
+  // Animation effect - only on initial mount
   useEffect(() => {
+    // Only animate on first load
+    if (hasAnimatedRef.current) return;
+    
     let startTime = null;
     const duration = 1500; // 1.5 seconds animation
 
@@ -219,11 +222,12 @@ export function LineChart({ data, title, unit, color = '#10b981', icon: Icon }) 
 
       if (progress < 1) {
         animationFrameRef.current = requestAnimationFrame(animate);
+      } else {
+        // Mark animation as completed
+        hasAnimatedRef.current = true;
       }
     };
 
-    // Reset and start animation when data changes
-    setAnimationProgress(0);
     animationFrameRef.current = requestAnimationFrame(animate);
 
     return () => {
@@ -231,7 +235,7 @@ export function LineChart({ data, title, unit, color = '#10b981', icon: Icon }) 
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [data]);
+  }, []); // Empty dependency - only run once on mount
 
   // Handle mouse move for tooltip
   const handleMouseMove = (e) => {

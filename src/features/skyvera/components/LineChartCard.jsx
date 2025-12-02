@@ -6,6 +6,7 @@ export function LineChartCard({ data, title, unit, color = '#3b82f6', icon: Icon
   const [tooltip, setTooltip] = useState({ show: false, x: 0, y: 0, value: 0, time: '' });
   const animationFrameRef = useRef(null);
   const [animationProgress, setAnimationProgress] = useState(0);
+  const hasAnimatedRef = useRef(false);
 
   const currentValue = (data && data.length > 0) ? data[data.length - 1].value : 0;
   const previousValue = (data && data.length > 1) ? data[data.length - 2].value : currentValue;
@@ -83,8 +84,7 @@ export function LineChartCard({ data, title, unit, color = '#3b82f6', icon: Icon
       ctx.fillText(data[data.length - 1].time, lastX, padding.top + chartHeight + 15);
     }
 
-    const visibleDataCount = Math.floor(data.length * animationProgress);
-    const visibleData = data.slice(0, Math.max(1, visibleDataCount));
+    const visibleData = hasAnimatedRef.current ? data : data.slice(0, Math.max(1, Math.floor(data.length * animationProgress)));
 
     if (visibleData.length > 0) {
       const gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartHeight);
@@ -154,9 +154,11 @@ export function LineChartCard({ data, title, unit, color = '#3b82f6', icon: Icon
       }
     }
 
-  }, [data, color, animationProgress]);
+  }, [data, color, animationProgress, hasAnimatedRef.current]);
 
   useEffect(() => {
+    if (hasAnimatedRef.current) return;
+    
     let startTime = null;
     const duration = 1000; // 1 second animation (faster for cards)
 
@@ -171,10 +173,11 @@ export function LineChartCard({ data, title, unit, color = '#3b82f6', icon: Icon
 
       if (progress < 1) {
         animationFrameRef.current = requestAnimationFrame(animate);
+      } else {
+        hasAnimatedRef.current = true;
       }
     };
 
-    setAnimationProgress(0);
     animationFrameRef.current = requestAnimationFrame(animate);
 
     return () => {
@@ -182,7 +185,7 @@ export function LineChartCard({ data, title, unit, color = '#3b82f6', icon: Icon
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [data]);
+  }, []);
 
   const handleMouseMove = (e) => {
     if (!data || data.length === 0) return;

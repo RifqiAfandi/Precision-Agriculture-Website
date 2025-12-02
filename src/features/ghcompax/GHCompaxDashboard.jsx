@@ -7,29 +7,28 @@ import { LineChart } from './components/LineChart';
 import { LineChartCard } from './components/LineChartCard';
 import { DetailChartView } from './components/DetailChartView';
 import {
-  currentGHCompaxData,
-  temperatureData,
-  humidityData,
   temperatureHistoryData,
   humidityHistoryData,
   tvocHistoryData,
   eco2HistoryData,
   tdsHistoryData,
   phHistoryData,
-  updateGHCompaxData,
+  fetchGHCompaxInitial,
+  subscribeGHCompaxRealtime,
   getParameterStatus,
   getStatusLabel,
   getGHCompaxStats,
 } from './data/ghcompaxData';
 
 export function GHCompaxDashboard() {
-  const [realtimeData, setRealtimeData] = useState(currentGHCompaxData);
-  const [tempData, setTempData] = useState(temperatureData);
-  const [humidData, setHumidData] = useState(humidityData);
-  const [tvocData, setTvocData] = useState(temperatureData.map(d => ({ ...d, value: Math.random() * 0.5 + 0.3 })));
-  const [eco2Data, setEco2Data] = useState(temperatureData.map(d => ({ ...d, value: Math.random() * 100 + 400 })));
-  const [tdsData, setTdsData] = useState(temperatureData.map(d => ({ ...d, value: Math.random() * 50 + 150 })));
-  const [phData, setPhData] = useState(temperatureData.map(d => ({ ...d, value: Math.random() * 1 + 6.5 })));
+  const [realtimeData, setRealtimeData] = useState({ lastUpdate: new Date().toLocaleString('en-US'), temperature: 28.5, humidity: 75, tvoc: 0.32, eco2: 410, tds: 850, phAir: 6.8 });
+  const [tempData, setTempData] = useState([]);
+  const [humidData, setHumidData] = useState([]);
+  const [tvocData, setTvocData] = useState([]);
+  const [eco2Data, setEco2Data] = useState([]);
+  const [tdsData, setTdsData] = useState([]);
+  const [phData, setPhData] = useState([]);
+  const [loading, setLoading] = useState(true);
   
   // Chart mode: 'detail2', 'detail4', 'history'
   const [chartMode, setChartMode] = useState('detail2');
@@ -49,75 +48,62 @@ export function GHCompaxDashboard() {
     setIsLoaded(true);
   }, []);
 
-  // Update data setiap 60 detik (1 menit) - hanya untuk mode detail2 dan detail4
+  // Load initial data
   useEffect(() => {
-    if (chartMode === 'history') return; // Skip real-time update in history mode
-    
-    const interval = setInterval(() => {
-      const newData = updateGHCompaxData(realtimeData);
-      setRealtimeData(newData);
+    let mounted = true;
+    (async () => {
+      try {
+        const initial = await fetchGHCompaxInitial();
+        if (!mounted) return;
 
-      // Update chart data - shift left and add new data
-      const now = new Date();
-      const newTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        setTempData((initial.temperatureData || []).slice(-20).map(d => ({ ...d })));
+        setHumidData((initial.humidityData || []).slice(-20).map(d => ({ ...d })));
+        setTvocData((initial.tvocData || []).slice(-20).map(d => ({ ...d })));
+        setEco2Data((initial.eco2Data || []).slice(-20).map(d => ({ ...d })));
+        setTdsData((initial.tdsData || []).slice(-20).map(d => ({ ...d })));
+        setPhData((initial.phData || []).slice(-20).map(d => ({ ...d })));
 
-      setTempData(prev => {
-        const newArr = [...prev.slice(1), {
-          time: newTime,
-          value: newData.temperature,
-          timestamp: now.getTime(),
-        }];
-        return newArr;
+        setRealtimeData(initial.currentData || { lastUpdate: new Date().toLocaleString('en-US'), temperature: 28.5, humidity: 75, tvoc: 0.32, eco2: 410, tds: 850, phAir: 6.8 });
+      } catch (err) {
+        console.error('Error loading initial GHCompax data', err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+
+    return () => { mounted = false; };
+  }, []);
+
+  // Subscribe to real-time updates (smooth append, no reload)
+  useEffect(() => {
+    let unsubscribe = null;
+    try {
+      unsubscribe = subscribeGHCompaxRealtime((data) => {
+        if (!data) return;
+        
+        setTempData((data.temperatureData || []).slice(-20));
+        setHumidData((data.humidityData || []).slice(-20));
+        setTvocData((data.tvocData || []).slice(-20));
+        setEco2Data((data.eco2Data || []).slice(-20));
+        setTdsData((data.tdsData || []).slice(-20));
+        setPhData((data.phData || []).slice(-20));
+        
+        if (data.currentData) {
+          setRealtimeData(data.currentData);
+        }
       });
+    } catch (err) {
+      console.error('subscribeGHCompaxRealtime failed', err);
+    }
 
-      setHumidData(prev => {
-        const newArr = [...prev.slice(1), {
-          time: newTime,
-          value: newData.humidity,
-          timestamp: now.getTime(),
-        }];
-        return newArr;
-      });
-
-      setTvocData(prev => {
-        const newArr = [...prev.slice(1), {
-          time: newTime,
-          value: newData.tvoc,
-          timestamp: now.getTime(),
-        }];
-        return newArr;
-      });
-
-      setEco2Data(prev => {
-        const newArr = [...prev.slice(1), {
-          time: newTime,
-          value: newData.eco2,
-          timestamp: now.getTime(),
-        }];
-        return newArr;
-      });
-
-      setTdsData(prev => {
-        const newArr = [...prev.slice(1), {
-          time: newTime,
-          value: newData.tds,
-          timestamp: now.getTime(),
-        }];
-        return newArr;
-      });
-
-      setPhData(prev => {
-        const newArr = [...prev.slice(1), {
-          time: newTime,
-          value: newData.phAir,
-          timestamp: now.getTime(),
-        }];
-        return newArr;
-      });
-    }, 60000); // 60 seconds
-
-    return () => clearInterval(interval);
-  }, [realtimeData, chartMode]);
+    return () => {
+      try {
+        if (typeof unsubscribe === 'function') unsubscribe();
+      } catch (e) {
+        console.error('Error unsubscribing', e);
+      }
+    };
+  }, []);
 
   // Handle history mode refresh
   const handleHistoryRefresh = () => {
@@ -199,7 +185,7 @@ export function GHCompaxDashboard() {
       icon: Wind,
       parameter: 'tvoc',
       description: 'Total Volatile Organic Compounds',
-      color: '#8b5cf6',
+      color: '#10b981',
     },
     {
       title: 'eCO₂',
@@ -260,7 +246,7 @@ export function GHCompaxDashboard() {
         data: chartMode === 'history' ? getLastNData(tvocHistoryData, 60) : getLastNData(tvocData, 20), 
         title: 'TVOC', 
         unit: 'mg/m³', 
-        color: '#8b5cf6', 
+        color: '#10b981', 
         icon: Wind, 
         parameter: 'tvoc' 
       },

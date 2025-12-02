@@ -11,8 +11,6 @@ export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, 
   const animationFrameRef = useRef(null);
   const [animationProgress, setAnimationProgress] = useState(0);
 
-  if (!data || data.length === 0) return null;
-
   // Fungsi untuk agregasi data per jam
   const aggregateByHour = (dataPoints) => {
     const hourlyData = {};
@@ -409,7 +407,17 @@ export function DetailChartView({ data, title, unit, color, icon: Icon, onBack, 
     setTooltip({ show: false, x: 0, y: 0, value: 0, time: '' });
   };
 
-  // Custom tooltip - REMOVED (replaced with canvas tooltip)
+  if (!data || data.length === 0) {
+    return (
+      <div className="absolute inset-0 overflow-y-auto overflow-x-hidden bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-900 dark:to-slate-800">
+        <div className="min-h-full p-2 sm:p-4 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-gray-500 dark:text-gray-400">No data available</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="absolute inset-0 overflow-y-auto overflow-x-hidden bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-900 dark:to-slate-800">
