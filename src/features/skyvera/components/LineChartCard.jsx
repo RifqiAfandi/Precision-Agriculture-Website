@@ -5,21 +5,36 @@ export function LineChartCard({ data, title, unit, color = '#3b82f6', icon: Icon
   const canvasRef = useRef(null);
   const [tooltip, setTooltip] = useState({ show: false, x: 0, y: 0, value: 0, time: '' });
   const animationFrameRef = useRef(null);
-  const previousDataRef = useRef([]);
-  const transitionProgressRef = useRef(1);
-  const lastUpdateTimeRef = useRef(Date.now());
+  const [animationProgress, setAnimationProgress] = useState(0);
+  const hasAnimatedRef = useRef(false);
 
   const currentValue = (data && data.length > 0) ? data[data.length - 1].value : 0;
   const previousValue = (data && data.length > 1) ? data[data.length - 2].value : currentValue;
   const change = currentValue - previousValue;
   const changePercent = previousValue !== 0 ? (change / previousValue * 100) : 0;
 
-  const drawChart = (ctx, rect, displayData, progress = 1) => {
+  useEffect(() => {
+    if (!data || data.length === 0) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    ctx.clearRect(0, 0, rect.width, rect.height);
+    ctx.clearRect(0, 0, rect.width, rect.height);
+
     const padding = { top: 10, right: 10, bottom: 25, left: 35 };
     const chartWidth = rect.width - padding.left - padding.right;
     const chartHeight = rect.height - padding.top - padding.bottom;
 
-    const values = displayData.map(d => d.value);
+    const values = data.map(d => d.value);
     const minValue = Math.min(...values);
     const maxValue = Math.max(...values);
     const valueRange = maxValue - minValue || 1;
@@ -57,152 +72,116 @@ export function LineChartCard({ data, title, unit, color = '#3b82f6', icon: Icon
     ctx.lineTo(padding.left + chartWidth, padding.top + chartHeight);
     ctx.stroke();
 
-    const labelInterval = Math.max(1, Math.floor(displayData.length / 4));
+    const labelInterval = Math.max(1, Math.floor(data.length / 4));
     ctx.fillStyle = textColor;
     ctx.font = '600 9px Inter, sans-serif';
     ctx.textAlign = 'center';
-    for (let i = 0; i < displayData.length; i += labelInterval) {
-      const x = padding.left + (chartWidth / (displayData.length - 1)) * i;
-      ctx.fillText(displayData[i].time, x, padding.top + chartHeight + 15);
+    for (let i = 0; i < data.length; i += labelInterval) {
+      const x = padding.left + (chartWidth / (data.length - 1)) * i;
+      ctx.fillText(data[i].time, x, padding.top + chartHeight + 15);
     }
-    if (displayData.length > 0) {
+    if (data.length > 0) {
       const lastX = padding.left + chartWidth;
-      ctx.fillText(displayData[displayData.length - 1].time, lastX, padding.top + chartHeight + 15);
+      ctx.fillText(data[data.length - 1].time, lastX, padding.top + chartHeight + 15);
     }
 
-    const gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartHeight);
-    gradient.addColorStop(0, color + '40');
-    gradient.addColorStop(1, color + '00');
+    // Draw all data (no animation after initial load)
+    const visibleData = hasAnimatedRef.current ? data : data.slice(0, Math.max(1, Math.floor(data.length * animationProgress)));
 
-    ctx.beginPath();
-    displayData.forEach((point, index) => {
-      const x = padding.left + (chartWidth / (displayData.length - 1)) * index;
-      const y = padding.top + chartHeight - ((point.value - minValue) / valueRange) * chartHeight;
-      
-      if (index === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-    });
+    if (visibleData.length > 0) {
+      const gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartHeight);
+      gradient.addColorStop(0, color + '40');
+      gradient.addColorStop(1, color + '00');
 
-    const lastVisibleIndex = displayData.length - 1;
-    const lastX = padding.left + (chartWidth / (displayData.length - 1)) * lastVisibleIndex;
-    ctx.lineTo(lastX, padding.top + chartHeight);
-    ctx.lineTo(padding.left, padding.top + chartHeight);
-    ctx.closePath();
-    ctx.fillStyle = gradient;
-    ctx.fill();
-
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-
-    ctx.beginPath();
-    displayData.forEach((point, index) => {
-      const x = padding.left + (chartWidth / (displayData.length - 1)) * index;
-      const y = padding.top + chartHeight - ((point.value - minValue) / valueRange) * chartHeight;
-      
-      if (index === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-    });
-
-    ctx.stroke();
-
-    if (displayData.length > 0) {
-      const lastPoint = displayData[displayData.length - 1];
-      const lastIndex = displayData.length - 1;
-      const x = padding.left + (chartWidth / (displayData.length - 1)) * lastIndex;
-      const y = padding.top + chartHeight - ((lastPoint.value - minValue) / valueRange) * chartHeight;
-
-      const pulseScale = 1 + Math.sin(Date.now() / 400) * 0.15;
-      
       ctx.beginPath();
-      ctx.arc(x, y, 6 * pulseScale, 0, 2 * Math.PI);
-      ctx.fillStyle = color + '30';
+      visibleData.forEach((point, index) => {
+        const x = padding.left + (chartWidth / (data.length - 1)) * index;
+        const y = padding.top + chartHeight - ((point.value - minValue) / valueRange) * chartHeight;
+        
+        if (index === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+
+      const lastVisibleIndex = visibleData.length - 1;
+      const lastX = padding.left + (chartWidth / (data.length - 1)) * lastVisibleIndex;
+      ctx.lineTo(lastX, padding.top + chartHeight);
+      ctx.lineTo(padding.left, padding.top + chartHeight);
+      ctx.closePath();
+      ctx.fillStyle = gradient;
       ctx.fill();
-      
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+
       ctx.beginPath();
-      ctx.arc(x, y, 3.5, 0, 2 * Math.PI);
-      ctx.fillStyle = color;
-      ctx.fill();
-      
-      ctx.beginPath();
-      ctx.arc(x, y, 3.5, 0, 2 * Math.PI);
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1.5;
+      visibleData.forEach((point, index) => {
+        const x = padding.left + (chartWidth / (data.length - 1)) * index;
+        const y = padding.top + chartHeight - ((point.value - minValue) / valueRange) * chartHeight;
+        
+        if (index === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+
       ctx.stroke();
-    }
-  };
 
+      if (visibleData.length > 0) {
+        const lastPoint = visibleData[visibleData.length - 1];
+        const lastIndex = visibleData.length - 1;
+        const x = padding.left + (chartWidth / (data.length - 1)) * lastIndex;
+        const y = padding.top + chartHeight - ((lastPoint.value - minValue) / valueRange) * chartHeight;
+
+        ctx.beginPath();
+        ctx.arc(x, y, 6, 0, 2 * Math.PI);
+        ctx.fillStyle = color + '30';
+        ctx.fill();
+        
+        ctx.beginPath();
+        ctx.arc(x, y, 3.5, 0, 2 * Math.PI);
+        ctx.fillStyle = color;
+        ctx.fill();
+        
+        ctx.beginPath();
+        ctx.arc(x, y, 3.5, 0, 2 * Math.PI);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+    }
+
+  }, [data, color, animationProgress, hasAnimatedRef.current]);
+
+  // Animation effect - only on initial mount
   useEffect(() => {
-    if (!data || data.length === 0) return;
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
-
-    const hasDataChanged = JSON.stringify(data) !== JSON.stringify(previousDataRef.current);
+    // Only animate on first load
+    if (hasAnimatedRef.current) return;
     
-    if (hasDataChanged) {
-      const now = Date.now();
-      const timeSinceLastUpdate = now - lastUpdateTimeRef.current;
-      
-      if (timeSinceLastUpdate < 100) {
-        transitionProgressRef.current = 0;
-      } else {
-        transitionProgressRef.current = 0;
-      }
-      
-      lastUpdateTimeRef.current = now;
-    }
+    let startTime = null;
+    const duration = 1000; // 1 second animation (faster for cards)
 
-    const animate = () => {
-      ctx.clearRect(0, 0, rect.width, rect.height);
-      
-      const progress = transitionProgressRef.current;
-      const easeProgress = 1 - Math.pow(1 - progress, 3);
+    const animate = (timestamp) => {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(elapsed / duration, 1);
 
-      let displayData = data;
+      const easeOutProgress = 1 - Math.pow(1 - progress, 3);
       
-      if (previousDataRef.current.length > 0 && progress < 1 && data.length === previousDataRef.current.length) {
-        displayData = data.map((point, index) => {
-          const prevPoint = previousDataRef.current[index];
-          if (prevPoint) {
-            return {
-              ...point,
-              value: prevPoint.value + (point.value - prevPoint.value) * easeProgress
-            };
-          }
-          return point;
-        });
-      }
-
-      drawChart(ctx, rect, displayData, easeProgress);
+      setAnimationProgress(easeOutProgress);
 
       if (progress < 1) {
-        transitionProgressRef.current = Math.min(1, progress + 0.02);
         animationFrameRef.current = requestAnimationFrame(animate);
       } else {
-        previousDataRef.current = [...data];
-        animationFrameRef.current = requestAnimationFrame(animate);
+        // Mark animation as completed
+        hasAnimatedRef.current = true;
       }
     };
-
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
 
     animationFrameRef.current = requestAnimationFrame(animate);
 
@@ -211,7 +190,7 @@ export function LineChartCard({ data, title, unit, color = '#3b82f6', icon: Icon
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [data, color]);
+  }, []); // Empty dependency - only run once on mount
 
   const handleMouseMove = (e) => {
     if (!data || data.length === 0) return;

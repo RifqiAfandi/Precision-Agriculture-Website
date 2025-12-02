@@ -194,7 +194,7 @@ export function GHCompaxDashboard() {
       icon: Activity,
       parameter: 'eco2',
       description: 'Equivalent CO2',
-      color: '#f59e0b',
+      color: '#10b981',
     },
     {
       title: 'TDS',
@@ -254,7 +254,7 @@ export function GHCompaxDashboard() {
         data: chartMode === 'history' ? getLastNData(eco2HistoryData, 60) : getLastNData(eco2Data, 20), 
         title: 'eCO₂', 
         unit: 'ppm', 
-        color: '#f59e0b', 
+        color: '#10b981', 
         icon: Activity, 
         parameter: 'eco2' 
       },
