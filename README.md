@@ -45,10 +45,54 @@ npm install
 
 3. Create environment file:
 ```bash
-cp .env.example .env.local
+cp .env.example .env
 ```
 
-4. Update `.env.local` with your configuration:
+4. Update `.env` with your Firebase configuration:
+```env
+VITE_FIREBASE_API_KEY=your_api_key_here
+VITE_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+VITE_FIREBASE_DATABASE_URL=https://your_project_id.firebaseio.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
+VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
+```
+
+5. Start the development server:
+```bash
+npm run dev
+```
+
+The application will be available at `http://localhost:5173`
+
+## 🔐 Environment Variables
+
+This project uses Firebase for real-time database. You need to set up the following environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| `VITE_FIREBASE_API_KEY` | Firebase API Key |
+| `VITE_FIREBASE_AUTH_DOMAIN` | Firebase Auth Domain |
+| `VITE_FIREBASE_DATABASE_URL` | Firebase Realtime Database URL |
+| `VITE_FIREBASE_PROJECT_ID` | Firebase Project ID |
+| `VITE_FIREBASE_STORAGE_BUCKET` | Firebase Storage Bucket |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Firebase Messaging Sender ID |
+| `VITE_FIREBASE_APP_ID` | Firebase App ID |
+| `VITE_FIREBASE_MEASUREMENT_ID` | Firebase Measurement ID |
+
+**Note:** Never commit your `.env` file to version control. Use `.env.example` as a template.
+
+## 🔥 Firebase Setup
+
+1. Create a new Firebase project at [Firebase Console](https://console.firebase.google.com/)
+2. Enable Realtime Database
+3. Set up database rules for your use case
+4. Get your Firebase config from Project Settings
+5. Copy the credentials to your `.env` file
+
+6. Update `.env.local` with your configuration:
 ```env
 VITE_API_URL=http://localhost:8000/api
 VITE_APP_NAME=Precision Agriculture Platform

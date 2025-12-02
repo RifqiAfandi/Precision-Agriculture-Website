@@ -2,14 +2,14 @@ import { initializeApp } from 'firebase/app';
 import { getDatabase, ref, get, onValue } from 'firebase/database';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBGxaG0HTcpgrzLb5pdYXrZC4XbQJ9tgTs",
-  authDomain: "skyveragh.firebaseapp.com",
-  databaseURL: "https://skyveragh-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "skyveragh",
-  storageBucket: "skyveragh.firebasestorage.app",
-  messagingSenderId: "601370452969",
-  appId: "1:601370452969:web:6893b6c6e351b0fdcc6178",
-  measurementId: "G-2XHWFS2KBC"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 let app;
